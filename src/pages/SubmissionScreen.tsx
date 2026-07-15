@@ -119,14 +119,17 @@ export function SubmissionScreen() {
       })
       
       if (!response.ok) {
-        throw new Error('Gagal menyimpan data')
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Backend Error Response:', errorData);
+        throw new Error(errorData.details || errorData.error || 'Gagal menyimpan data');
       }
       
       const result = await response.json()
       console.log('Payload Submitted:', result)
       setIsSuccess(true)
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
+      alert('Error: ' + error.message);
     } finally {
       setIsSubmitting(false)
     }
