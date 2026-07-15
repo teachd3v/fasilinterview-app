@@ -6,7 +6,6 @@ import { useInterviewStore } from '../store/useInterviewStore'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -25,7 +24,7 @@ export function OnboardingScreen() {
   const { setCandidateData } = useInterviewStore()
 
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       interviewerName: "",
       candidateName: "",
@@ -61,7 +60,7 @@ export function OnboardingScreen() {
         </CardHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit(onSubmit as any)}>
             <CardContent className="pt-4 pb-4 px-8 bg-white/40">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                 {/* Kiri: Data Pewawancara & Basic Kandidat */}
@@ -71,7 +70,7 @@ export function OnboardingScreen() {
                     <h3 className="text-sm font-semibold text-slate-700">Data Pewawancara</h3>
                   </div>
                   <FormField
-                    control={form.control}
+                    control={form.control as any}
                     name="interviewerName"
                     render={({ field }) => (
                       <FormItem>
@@ -89,7 +88,7 @@ export function OnboardingScreen() {
                     <h3 className="text-sm font-semibold text-slate-700">Identitas Kandidat</h3>
                   </div>
                   <FormField
-                    control={form.control}
+                    control={form.control as any}
                     name="candidateName"
                     render={({ field }) => (
                       <FormItem>
@@ -111,7 +110,7 @@ export function OnboardingScreen() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
-                      control={form.control}
+                      control={form.control as any}
                       name="ipk"
                       render={({ field }) => (
                         <FormItem>
@@ -124,7 +123,7 @@ export function OnboardingScreen() {
                       )}
                     />
                     <FormField
-                      control={form.control}
+                      control={form.control as any}
                       name="semester"
                       render={({ field }) => (
                         <FormItem>
@@ -140,7 +139,7 @@ export function OnboardingScreen() {
 
                   <div className="mt-4">
                     <FormField
-                      control={form.control}
+                      control={form.control as any}
                       name="potentialSkill"
                       render={({ field }) => (
                         <FormItem>

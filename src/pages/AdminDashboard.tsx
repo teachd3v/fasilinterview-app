@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Loader2, Users, CheckCircle2, AlertTriangle, FileText } from 'lucide-react'
+import { Loader2, Users, AlertTriangle } from 'lucide-react'
 
 type CandidateResult = {
   id: number

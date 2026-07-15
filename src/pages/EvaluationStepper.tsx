@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useInterviewStore } from '../store/useInterviewStore'
 import { rubricData } from '../data/rubric'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+
 import { CheckCircle2, ChevronLeft, ChevronRight, AlertTriangle, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -127,7 +127,7 @@ export function EvaluationStepper() {
           <div className="space-y-6">
             {aspect.indicators.map((indicator, idx) => {
               const currentScore = scores[indicator.id]?.score
-              const currentNote = scores[indicator.id]?.note || ''
+
               
               // Red flag check for indicator 22 and 23 (Syarat Mutlak)
               const showRedFlag = aspect.isCritical && currentScore === 1
