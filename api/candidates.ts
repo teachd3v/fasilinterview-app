@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { eq, desc } from 'drizzle-orm';
-import { candidates, interviews } from '../src/db/schema';
+import { candidates, interviews } from '../src/db/schema.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
