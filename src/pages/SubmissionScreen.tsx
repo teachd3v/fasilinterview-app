@@ -20,9 +20,7 @@ export function SubmissionScreen() {
     }
   }, [candidateData, navigate])
 
-  if (!candidateData) {
-    return null
-  }
+
 
   // Calculate scores
   const { totalScore, category, hasRedFlag, aspectResults } = useMemo(() => {
@@ -136,8 +134,12 @@ export function SubmissionScreen() {
   }
 
   const handleFinish = () => {
-    resetInterview()
     navigate('/')
+    setTimeout(() => resetInterview(), 100)
+  }
+
+  if (!candidateData) {
+    return null
   }
 
   if (isSuccess) {
@@ -160,7 +162,7 @@ export function SubmissionScreen() {
             <Button onClick={handleFinish} variant="outline" size="sm" className="px-6 rounded-full font-medium">
               Kembali ke Form
             </Button>
-            <Button onClick={() => { resetInterview(); navigate('/admin'); }} size="sm" className="px-6 rounded-full shadow-md hover:shadow-lg transition-all font-medium">
+            <Button onClick={() => { navigate('/admin'); setTimeout(() => resetInterview(), 100); }} size="sm" className="px-6 rounded-full shadow-md hover:shadow-lg transition-all font-medium">
               Lanjut ke Admin
             </Button>
           </div>
@@ -187,8 +189,8 @@ export function SubmissionScreen() {
           
           <button 
             onClick={() => {
-              resetInterview()
               navigate('/admin')
+              setTimeout(() => resetInterview(), 100)
             }}
             className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors bg-white/50 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm"
           >
@@ -216,12 +218,12 @@ export function SubmissionScreen() {
                 <p className="font-semibold text-slate-700">{candidateData.interviewerName}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">IPK / SMT</p>
-                <p className="font-semibold text-slate-700">{candidateData.ipk} / {candidateData.semester}</p>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">IPK</p>
+                <p className="font-semibold text-slate-700">{candidateData.ipk}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Potensi</p>
-                <p className="font-semibold text-slate-700 capitalize">{candidateData.potentialSkill.replace('_', ' ')}</p>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Posisi / Wilayah</p>
+                <p className="font-semibold text-slate-700 capitalize">{candidateData.posisiLamaran} / {candidateData.wilayahPendaftaran}</p>
               </div>
             </div>
 

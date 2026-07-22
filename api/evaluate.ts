@@ -19,56 +19,75 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const db = drizzle(sql);
 
     let currentInterviewId = interviewId;
+    let candId: number;
+    
+    // Upsert candidate by name (since candidate data is fixed from CSV, we just insert if not exists, or update if exists to keep it fresh)
+    const existingCandidate = await db.select().from(candidates).where(eq(candidates.candidateName, candidate.candidateName)).limit(1);
+    
+    if (existingCandidate.length > 0) {
+      candId = existingCandidate[0].id;
+      // Optionally update candidate data just in case CSV changed
+      await db.update(candidates).set({
+        jenisKelamin: candidate.jenisKelamin,
+        posisiLamaran: candidate.posisiLamaran,
+        wilayahPendaftaran: candidate.wilayahPendaftaran,
+        kampus: candidate.kampus,
+        ipk: candidate.ipk,
+        lamaStudi: candidate.lamaStudi,
+        tautanBerkas: candidate.tautanBerkas,
+      }).where(eq(candidates.id, candId));
+    } else {
+      const [newCandidate] = await db.insert(candidates).values({
+        candidateName: candidate.candidateName,
+        jenisKelamin: candidate.jenisKelamin,
+        posisiLamaran: candidate.posisiLamaran,
+        wilayahPendaftaran: candidate.wilayahPendaftaran,
+        kampus: candidate.kampus,
+        ipk: candidate.ipk,
+        lamaStudi: candidate.lamaStudi,
+        tautanBerkas: candidate.tautanBerkas,
+      }).returning({ id: candidates.id });
+      candId = newCandidate.id;
+    }
 
     if (interviewId) {
-      // Update existing
-      const interviewRecord = await db.select().from(interviews).where(eq(interviews.id, interviewId)).limit(1);
-      if (interviewRecord.length > 0) {
-        const candId = interviewRecord[0].candidateId;
-        
-        // Update candidate
-        await db.update(candidates).set({
-          interviewerName: candidate.interviewerName,
-          candidateName: candidate.candidateName,
-          ipk: candidate.ipk,
-          semester: candidate.semester,
-          potentialSkill: candidate.potentialSkill,
-        }).where(eq(candidates.id, candId));
+      // Update existing interview
+      await db.update(interviews).set({
+        interviewerName: candidate.interviewerName,
+        totalScore: finalScore,
+        category: category,
+        hasRedFlag: hasRedFlag,
+        aspectResults: aspectResults,
+      }).where(eq(interviews.id, interviewId));
 
-        // Update interview metadata
-        await db.update(interviews).set({
-          totalScore: finalScore,
-          category: category,
-          hasRedFlag: hasRedFlag,
-          aspectResults: aspectResults,
-        }).where(eq(interviews.id, interviewId));
-
-        // Delete old scores and re-insert
-        await db.delete(interviewScores).where(eq(interviewScores.interviewId, interviewId));
-        
-        const scoresToInsert = Object.entries(evaluation).map(([indicatorId, data]: any) => ({
-          interviewId: interviewId,
-          indicatorId: indicatorId,
-          score: data.score,
-          note: data.note || null,
-        }));
-        
-        if (scoresToInsert.length > 0) {
-          await db.insert(interviewScores).values(scoresToInsert);
-        }
+      // Delete old scores and re-insert
+      await db.delete(interviewScores).where(eq(interviewScores.interviewId, interviewId));
+      
+      const scoresToInsert = Object.entries(evaluation).map(([indicatorId, data]: any) => ({
+        interviewId: interviewId,
+        indicatorId: indicatorId,
+        score: data.score,
+        note: data.note || null,
+      }));
+      
+      if (scoresToInsert.length > 0) {
+        await db.insert(interviewScores).values(scoresToInsert);
       }
     } else {
-      // Create new
-      const [newCandidate] = await db.insert(candidates).values({
-        interviewerName: candidate.interviewerName,
-        candidateName: candidate.candidateName,
-        ipk: candidate.ipk,
-        semester: candidate.semester,
-        potentialSkill: candidate.potentialSkill,
-      }).returning({ id: candidates.id });
-
+      // Cek Anti-Duplikasi: Pastikan interviewer belum pernah menilai kandidat ini
+      const existingInterview = await db.select().from(interviews).where(
+        eq(interviews.candidateId, candId)
+      );
+      
+      const hasEvaluated = existingInterview.some(i => i.interviewerName === candidate.interviewerName);
+      if (hasEvaluated) {
+        throw new Error(`Interviewer ${candidate.interviewerName} sudah pernah mengevaluasi kandidat ini. Silakan gunakan fitur Edit di Admin Dashboard jika ingin mengubah nilai.`);
+      }
+      
+      // Create new interview
       const [newInterview] = await db.insert(interviews).values({
-        candidateId: newCandidate.id,
+        candidateId: candId,
+        interviewerName: candidate.interviewerName,
         totalScore: finalScore,
         category: category,
         hasRedFlag: hasRedFlag,

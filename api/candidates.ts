@@ -16,26 +16,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sql = neon(process.env.DATABASE_URL);
     const db = drizzle(sql);
 
-    // Fetch all interviews with candidate details, sorted by total score descending
-    const results = await db
-      .select({
-        id: interviews.id,
-        candidateName: candidates.candidateName,
-        interviewerName: candidates.interviewerName,
-        ipk: candidates.ipk,
-        semester: candidates.semester,
-        potentialSkill: candidates.potentialSkill,
-        totalScore: interviews.totalScore,
-        category: interviews.category,
-        hasRedFlag: interviews.hasRedFlag,
-        aspectResults: interviews.aspectResults,
-        createdAt: interviews.createdAt,
-      })
-      .from(interviews)
-      .innerJoin(candidates, eq(interviews.candidateId, candidates.id))
-      .orderBy(desc(interviews.totalScore));
+    // Fetch all candidates
+    const allCandidates = await db.select().from(candidates).orderBy(desc(candidates.createdAt));
+    
+    // Fetch all interviews
+    const allInterviews = await db.select().from(interviews);
 
-    return res.status(200).json({ success: true, data: results });
+    // Group interviews by candidateId
+    const results = allCandidates.map(candidate => {
+      const candidateInterviews = allInterviews.filter(i => i.candidateId === candidate.id);
+      
+      let averageScore = 0;
+      let hasRedFlag = false;
+      let combinedAspects = [];
+      let interviewerNames = [];
+
+      if (candidateInterviews.length > 0) {
+        const total = candidateInterviews.reduce((acc, curr) => acc + curr.totalScore, 0);
+        averageScore = total / candidateInterviews.length;
+        
+        hasRedFlag = candidateInterviews.some(i => i.hasRedFlag);
+        interviewerNames = candidateInterviews.map(i => i.interviewerName);
+        combinedAspects = candidateInterviews.map(i => ({
+          interviewerName: i.interviewerName,
+          interviewId: i.id,
+          aspectResults: i.aspectResults
+        }));
+      }
+
+      return {
+        id: candidate.id,
+        candidateName: candidate.candidateName,
+        jenisKelamin: candidate.jenisKelamin,
+        kampus: candidate.kampus,
+        posisiLamaran: candidate.posisiLamaran,
+        wilayahPendaftaran: candidate.wilayahPendaftaran,
+        ipk: candidate.ipk,
+        lamaStudi: candidate.lamaStudi,
+        tautanBerkas: candidate.tautanBerkas,
+        status: candidate.status,
+        createdAt: candidate.createdAt,
+        // Aggregated interview data
+        interviews: candidateInterviews,
+        interviewerNames: interviewerNames.join(' & '),
+        totalScore: averageScore,
+        hasRedFlag,
+        combinedAspects
+      };
+    });
+    
+    // Only return candidates that have at least one interview, or all of them? 
+    // Usually Admin Dashboard only shows evaluated candidates, so let's filter:
+    const evaluatedCandidates = results.filter(r => r.interviews.length > 0);
+    
+    // Sort by average total score descending
+    evaluatedCandidates.sort((a, b) => b.totalScore - a.totalScore);
+
+    return res.status(200).json({ success: true, data: evaluatedCandidates });
 
   } catch (error: any) {
     console.error('Error fetching candidates:', error);

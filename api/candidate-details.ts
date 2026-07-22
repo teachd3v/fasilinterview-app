@@ -51,7 +51,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       success: true,
       data: {
         interviewId: interview.id,
-        candidate,
+        candidate: {
+          ...candidate,
+          interviewerName: interview.interviewerName
+        },
         scores: scoresRecord,
         aspectNotes,
         totalScore: interview.totalScore,

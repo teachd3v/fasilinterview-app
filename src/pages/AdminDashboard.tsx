@@ -17,20 +17,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Loader2, Users, AlertTriangle } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
+import { Loader2, Users, AlertTriangle, Eye, ChevronDown, CheckCircle, XCircle } from 'lucide-react'
 
 type CandidateResult = {
   id: number
   candidateName: string
-  interviewerName: string
-  ipk: number
-  semester: number
-  potentialSkill: string
+  interviewerNames: string
   totalScore: number
-  category: string
   hasRedFlag: boolean
-  aspectResults: any
+  status: string | null
+  combinedAspects: any[]
+  interviews: any[]
   createdAt: string
+  posisiLamaran: string
 }
 
 export function AdminDashboard() {
@@ -39,6 +40,8 @@ export function AdminDashboard() {
   const [candidateToDelete, setCandidateToDelete] = useState<number | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [viewNotesCandidate, setViewNotesCandidate] = useState<CandidateResult | null>(null)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null)
 
   const fetchCandidates = async () => {
     try {
@@ -58,10 +61,10 @@ export function AdminDashboard() {
     fetchCandidates()
   }, [])
 
-  const handleEdit = async (id: number) => {
-    setEditingId(id)
+  const handleEdit = async (interviewId: number) => {
+    setEditingId(interviewId)
     try {
-      const response = await fetch(`/api/candidate-details?id=${id}`)
+      const response = await fetch(`/api/candidate-details?id=${interviewId}`)
       const json = await response.json()
       if (json.success) {
         useInterviewStore.getState().setEditMode(
@@ -89,7 +92,7 @@ export function AdminDashboard() {
       const response = await fetch('/api/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ interviewId: candidateToDelete })
+        body: JSON.stringify({ candidateId: candidateToDelete })
       })
       const json = await response.json()
       if (json.success) {
@@ -106,20 +109,26 @@ export function AdminDashboard() {
     }
   }
 
-  const getCategoryBadge = (category: string, hasRedFlag: boolean) => {
-    if (hasRedFlag) {
-      return <Badge variant="destructive" className="bg-red-600"><AlertTriangle className="w-3 h-3 mr-1" /> RED FLAG</Badge>
+  const handleUpdateStatus = async (candidateId: number, status: string) => {
+    setIsUpdatingStatus(candidateId)
+    try {
+      const response = await fetch('/api/candidate-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidateId, status })
+      })
+      const json = await response.json()
+      if (json.success) {
+        await fetchCandidates()
+      } else {
+        alert("Gagal mengupdate status: " + json.error)
+      }
+    } catch (error) {
+      console.error(error)
+      alert("Terjadi kesalahan saat mengupdate status.")
+    } finally {
+      setIsUpdatingStatus(null)
     }
-    if (category.includes('SANGAT')) {
-      return <Badge className="bg-emerald-500 hover:bg-emerald-600">Sangat Direkomendasikan</Badge>
-    }
-    if (category.includes('CATATAN')) {
-      return <Badge className="bg-blue-500 hover:bg-blue-600">Dengan Catatan</Badge>
-    }
-    if (category.includes('DIPERTIMBANGKAN')) {
-      return <Badge className="bg-amber-500 hover:bg-amber-600">Perlu Pendalaman</Badge>
-    }
-    return <Badge variant="destructive">Tidak Lolos</Badge>
   }
 
   if (isLoading) {
@@ -132,7 +141,7 @@ export function AdminDashboard() {
 
   return (
     <div className="min-h-screen p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         
         <div className="flex items-center justify-between">
           <div>
@@ -155,14 +164,14 @@ export function AdminDashboard() {
             <CardTitle className="text-lg">Daftar Kandidat</CardTitle>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto">
-            <Table className="min-w-[800px]">
+            <Table className="min-w-[1000px]">
               <TableHeader className="bg-white/50 border-b border-white/80">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[280px] h-12 px-6 font-semibold text-slate-700">Nama Kandidat</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold text-slate-700">Pewawancara</TableHead>
-                  <TableHead className="h-12 px-6 text-center font-semibold text-slate-700">IPK</TableHead>
-                  <TableHead className="h-12 px-6 text-center font-semibold text-slate-700">Skor Akhir</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold text-slate-700">Keputusan Akhir</TableHead>
+                  <TableHead className="w-[250px] h-12 px-6 font-semibold text-slate-700">Nama Kandidat</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold text-slate-700">Interviewer</TableHead>
+                  <TableHead className="h-12 px-6 text-center font-semibold text-slate-700">Rata-rata Skor</TableHead>
+                  <TableHead className="h-12 px-6 text-center font-semibold text-slate-700">Catatan</TableHead>
+                  <TableHead className="h-12 px-6 text-center font-semibold text-slate-700">Status</TableHead>
                   <TableHead className="h-12 px-6 text-right font-semibold text-slate-700">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -170,47 +179,77 @@ export function AdminDashboard() {
                 {data.map((candidate) => (
                   <TableRow key={candidate.id} className="hover:bg-white/60 transition-colors border-b border-white/50">
                     <TableCell className="px-6 py-4 font-medium">
-                      <div className="text-slate-800 text-sm">{candidate.candidateName}</div>
+                      <div className="text-slate-800 text-sm font-semibold">{candidate.candidateName}</div>
                       <div className="text-xs text-slate-500 mt-1 capitalize font-normal flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-primary/60"></span>
-                        {candidate.potentialSkill.replace('_', ' ')}
+                        {candidate.posisiLamaran}
                       </div>
+                      {candidate.hasRedFlag && (
+                        <div className="mt-2">
+                           <Badge variant="destructive" className="bg-red-600/90 hover:bg-red-600 text-[10px] py-0"><AlertTriangle className="w-3 h-3 mr-1" /> RED FLAG</Badge>
+                        </div>
+                      )}
                     </TableCell>
-                    <TableCell className="px-6 py-4 text-sm text-slate-600">{candidate.interviewerName}</TableCell>
-                    <TableCell className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center bg-slate-100/80 px-2 py-1 rounded-md text-xs font-semibold text-slate-600">
-                        {candidate.ipk.toFixed(2)}
-                      </span>
+                    <TableCell className="px-6 py-4 text-sm text-slate-600">
+                      {candidate.interviewerNames || '-'}
                     </TableCell>
                     <TableCell className="px-6 py-4 text-center">
                       <span className="font-bold text-slate-800 text-lg tabular-nums tracking-tight">
-                        {candidate.totalScore.toFixed(1)}
+                        {candidate.totalScore ? candidate.totalScore.toFixed(1) : '-'}
                       </span>
                     </TableCell>
-                    <TableCell className="px-6 py-4">
-                      {getCategoryBadge(candidate.category, candidate.hasRedFlag)}
+                    <TableCell className="px-6 py-4 text-center">
+                      <button 
+                        onClick={() => setViewNotesCandidate(candidate)}
+                        className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors inline-flex"
+                        title="Lihat Catatan Wawancara"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-center">
+                      {candidate.status === 'Lolos' && <Badge className="bg-emerald-500 hover:bg-emerald-600">Lolos</Badge>}
+                      {candidate.status === 'Tidak Lolos' && <Badge variant="destructive">Tidak Lolos</Badge>}
+                      {!candidate.status && <span className="text-xs text-slate-400 italic">Belum diputuskan</span>}
                     </TableCell>
                     <TableCell className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button 
-                          onClick={() => window.location.href = `/admin/detail/${candidate.id}`}
-                          className="text-primary text-sm font-semibold hover:text-emerald-600 transition-colors bg-white/50 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm"
-                          title="Lihat Detail"
-                        >
-                          Detail
-                        </button>
-                        <button 
-                          onClick={() => handleEdit(candidate.id)}
-                          disabled={editingId === candidate.id}
-                          className="text-blue-600 text-sm font-semibold hover:text-blue-700 transition-colors bg-white/50 px-3 py-1.5 rounded-full border border-blue-200 shadow-sm flex items-center gap-1.5 disabled:opacity-50"
-                          title="Edit Data"
-                        >
-                          {editingId === candidate.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                          {editingId === candidate.id ? 'Loading' : 'Edit'}
-                        </button>
+                      <div className="flex justify-end gap-2 items-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8 bg-white/50 border-primary/20 hover:bg-primary/5 text-primary" disabled={isUpdatingStatus === candidate.id}>
+                              {isUpdatingStatus === candidate.id ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
+                              Keputusan <ChevronDown className="w-3 h-3 ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(candidate.id, 'Lolos')} className="text-emerald-600 font-medium">
+                              <CheckCircle className="w-4 h-4 mr-2" /> Lolos
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(candidate.id, 'Tidak Lolos')} className="text-red-600 font-medium">
+                              <XCircle className="w-4 h-4 mr-2" /> Tidak Lolos
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8 bg-white/50 border-blue-200 hover:bg-blue-50 text-blue-600" disabled={editingId !== null}>
+                              {editingId !== null ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                              Edit Form <ChevronDown className="w-3 h-3 ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {candidate.interviews.map((inv: any) => (
+                              <DropdownMenuItem key={inv.id} onClick={() => handleEdit(inv.id)}>
+                                Edit Form ({inv.interviewerName})
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
                         <button 
                           onClick={() => setCandidateToDelete(candidate.id)}
-                          className="text-red-600 text-sm font-semibold hover:text-red-700 transition-colors bg-white/50 px-3 py-1.5 rounded-full border border-red-200 shadow-sm"
+                          className="text-red-600 text-sm font-semibold hover:text-red-700 transition-colors bg-white/50 px-3 py-1.5 rounded-md border border-red-200 shadow-sm"
                           title="Hapus Data"
                         >
                           Hapus
@@ -239,7 +278,43 @@ export function AdminDashboard() {
 
       </div>
 
-
+      {/* Catatan Dialog */}
+      <Dialog open={!!viewNotesCandidate} onOpenChange={(open) => !open && setViewNotesCandidate(null)}>
+        <DialogContent className="max-w-[95vw] sm:max-w-[80vw] w-full max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-slate-800">
+              Catatan Evaluasi: {viewNotesCandidate?.candidateName}
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Berikut adalah gabungan catatan dari semua interviewer untuk kandidat ini.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {viewNotesCandidate?.combinedAspects.map((ca: any, index: number) => (
+              <div key={index} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <h4 className="font-semibold text-primary mb-3 pb-2 border-b border-slate-200">Interviewer: {ca.interviewerName}</h4>
+                {ca.aspectResults && ca.aspectResults.length > 0 ? (
+                   <div className="space-y-4">
+                     {ca.aspectResults.map((aspect: any, idx: number) => (
+                       <div key={idx} className="bg-white p-3 rounded border border-slate-100 shadow-sm">
+                         <div className="flex justify-between items-start mb-1">
+                           <span className="font-medium text-slate-800 text-sm">{aspect.title}</span>
+                           <span className="text-xs font-bold bg-slate-100 px-2 py-1 rounded">
+                             Rata-rata: {aspect.averageScore} | Tertimbang: {aspect.weightedScore}
+                           </span>
+                         </div>
+                         <p className="text-sm text-slate-600 mt-1 whitespace-pre-wrap">{aspect.note || <span className="italic text-slate-400">Tidak ada catatan khusus.</span>}</p>
+                       </div>
+                     ))}
+                   </div>
+                ) : (
+                  <p className="text-sm text-slate-500 italic">Belum ada catatan yang tersimpan.</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!candidateToDelete} onOpenChange={(open) => !open && !isDeleting && setCandidateToDelete(null)}>
@@ -249,7 +324,7 @@ export function AdminDashboard() {
               <AlertTriangle className="w-5 h-5" /> Konfirmasi Hapus Data
             </DialogTitle>
             <DialogDescription className="pt-3 text-slate-600">
-              Apakah Anda yakin ingin menghapus data wawancara ini secara permanen? 
+              Apakah Anda yakin ingin menghapus <strong>seluruh data kandidat</strong> ini beserta hasil wawancaranya? 
               Tindakan ini tidak dapat dibatalkan.
             </DialogDescription>
           </DialogHeader>

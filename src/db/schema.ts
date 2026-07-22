@@ -2,11 +2,15 @@ import { pgTable, serial, text, integer, real, boolean, timestamp, json } from "
 
 export const candidates = pgTable("candidates", {
   id: serial("id").primaryKey(),
-  interviewerName: text("interviewer_name").notNull(),
   candidateName: text("candidate_name").notNull(),
-  ipk: real("ipk").notNull(),
-  semester: integer("semester").notNull(),
-  potentialSkill: text("potential_skill").notNull(),
+  jenisKelamin: text("jenis_kelamin"),
+  posisiLamaran: text("posisi_lamaran"),
+  wilayahPendaftaran: text("wilayah_pendaftaran"),
+  kampus: text("kampus"),
+  ipk: text("ipk"),
+  lamaStudi: text("lama_studi"),
+  tautanBerkas: text("tautan_berkas"),
+  status: text("status"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -15,6 +19,7 @@ export const interviews = pgTable("interviews", {
   candidateId: integer("candidate_id")
     .references(() => candidates.id)
     .notNull(),
+  interviewerName: text("interviewer_name").notNull(),
   totalScore: real("total_score").notNull(),
   category: text("category").notNull(),
   hasRedFlag: boolean("has_red_flag").notNull(),

@@ -4,9 +4,13 @@ import { persist } from 'zustand/middleware'
 export interface CandidateData {
   interviewerName: string
   candidateName: string
-  ipk: number
-  semester: number
-  potentialSkill: string
+  jenisKelamin: string
+  posisiLamaran: string
+  wilayahPendaftaran: string
+  kampus: string
+  ipk: string
+  lamaStudi: string
+  tautanBerkas: string
 }
 
 export interface IndicatorScore {
