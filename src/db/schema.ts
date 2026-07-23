@@ -7,9 +7,11 @@ export const candidates = pgTable("candidates", {
   posisiLamaran: text("posisi_lamaran"),
   wilayahPendaftaran: text("wilayah_pendaftaran"),
   kampus: text("kampus"),
+  prodi: text("prodi"),
   ipk: text("ipk"),
   lamaStudi: text("lama_studi"),
   tautanBerkas: text("tautan_berkas"),
+  photoUrl: text("photo_url"),
   status: text("status"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

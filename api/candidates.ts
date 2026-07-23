@@ -55,6 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         lamaStudi: candidate.lamaStudi,
         tautanBerkas: candidate.tautanBerkas,
         status: candidate.status,
+        photoUrl: candidate.photoUrl,
         createdAt: candidate.createdAt,
         // Aggregated interview data
         interviews: candidateInterviews,

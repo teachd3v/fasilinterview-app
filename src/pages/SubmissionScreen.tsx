@@ -218,8 +218,8 @@ export function SubmissionScreen() {
                 <p className="font-semibold text-slate-700">{candidateData.interviewerName}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">IPK</p>
-                <p className="font-semibold text-slate-700">{candidateData.ipk}</p>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Kampus / Prodi</p>
+                <p className="font-semibold text-slate-700">{candidateData.kampus} / {candidateData.prodi}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Posisi / Wilayah</p>

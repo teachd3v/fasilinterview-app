@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Loader2, Users, AlertTriangle, Eye, ChevronDown, CheckCircle, XCircle } from 'lucide-react'
+import { Loader2, Users, AlertTriangle, Eye, ChevronDown, CheckCircle, XCircle, Image as ImageIcon } from 'lucide-react'
 
 type CandidateResult = {
   id: number
@@ -32,6 +32,7 @@ type CandidateResult = {
   interviews: any[]
   createdAt: string
   posisiLamaran: string
+  photoUrl?: string
 }
 
 export function AdminDashboard() {
@@ -42,6 +43,13 @@ export function AdminDashboard() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [viewNotesCandidate, setViewNotesCandidate] = useState<CandidateResult | null>(null)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null)
+  
+  // Photo Upload States
+  const [uploadCandidateId, setUploadCandidateId] = useState<number | null>(null)
+  const [uploadCandidateName, setUploadCandidateName] = useState<string>('')
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [fullPhotoPreview, setFullPhotoPreview] = useState<string | null>(null)
 
   const fetchCandidates = async () => {
     try {
@@ -131,6 +139,77 @@ export function AdminDashboard() {
     }
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      alert("Harap pilih file gambar (JPG/PNG).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // Max width/height
+        const MAX_DIMENSION = 800;
+        if (width > height && width > MAX_DIMENSION) {
+          height = Math.round((height * MAX_DIMENSION) / width);
+          width = MAX_DIMENSION;
+        } else if (height > MAX_DIMENSION) {
+          width = Math.round((width * MAX_DIMENSION) / height);
+          height = MAX_DIMENSION;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Compress to JPEG with 0.7 quality
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        setPhotoPreview(dataUrl);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const handleUploadPhoto = async () => {
+    if (!uploadCandidateId || !photoPreview) return;
+    
+    setIsUploadingPhoto(true);
+    try {
+      const response = await fetch('/api/upload-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidateId: uploadCandidateId,
+          photoBase64: photoPreview
+        })
+      });
+      const json = await response.json();
+      if (json.success) {
+        setUploadCandidateId(null);
+        setPhotoPreview(null);
+        await fetchCandidates();
+      } else {
+        alert("Gagal upload foto: " + json.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan saat upload foto.");
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -179,16 +258,33 @@ export function AdminDashboard() {
                 {data.map((candidate) => (
                   <TableRow key={candidate.id} className="hover:bg-white/60 transition-colors border-b border-white/50">
                     <TableCell className="px-6 py-4 font-medium">
-                      <div className="text-slate-800 text-sm font-semibold">{candidate.candidateName}</div>
-                      <div className="text-xs text-slate-500 mt-1 capitalize font-normal flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary/60"></span>
-                        {candidate.posisiLamaran}
-                      </div>
-                      {candidate.hasRedFlag && (
-                        <div className="mt-2">
-                           <Badge variant="destructive" className="bg-red-600/90 hover:bg-red-600 text-[10px] py-0"><AlertTriangle className="w-3 h-3 mr-1" /> RED FLAG</Badge>
+                      <div className="flex items-center gap-4">
+                        {candidate.photoUrl ? (
+                          <button 
+                            onClick={() => setFullPhotoPreview(candidate.photoUrl!)}
+                            className="w-12 h-12 rounded-md object-cover border border-slate-200 shadow-sm overflow-hidden hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            title="Lihat Foto Layar Penuh"
+                          >
+                            <img src={candidate.photoUrl} alt={candidate.candidateName} className="w-full h-full object-cover" />
+                          </button>
+                        ) : (
+                          <div className="w-12 h-12 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                            <ImageIcon className="w-5 h-5 text-slate-300" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-slate-800 text-sm font-semibold">{candidate.candidateName}</div>
+                          <div className="text-xs text-slate-500 mt-1 capitalize font-normal flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary/60"></span>
+                            {candidate.posisiLamaran}
+                          </div>
+                          {candidate.hasRedFlag && (
+                            <div className="mt-2">
+                               <Badge variant="destructive" className="bg-red-600/90 hover:bg-red-600 text-[10px] py-0"><AlertTriangle className="w-3 h-3 mr-1" /> RED FLAG</Badge>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </TableCell>
                     <TableCell className="px-6 py-4 text-sm text-slate-600">
                       {candidate.interviewerNames || '-'}
@@ -246,6 +342,19 @@ export function AdminDashboard() {
                             ))}
                           </DropdownMenuContent>
                         </DropdownMenu>
+
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 bg-white/50 border-purple-200 hover:bg-purple-50 text-purple-600"
+                          onClick={() => {
+                            setUploadCandidateId(candidate.id);
+                            setUploadCandidateName(candidate.candidateName);
+                            setPhotoPreview(null);
+                          }}
+                        >
+                          <ImageIcon className="w-3 h-3 mr-1" /> {candidate.photoUrl ? 'Ganti Foto' : 'Upload Foto'}
+                        </Button>
 
                         <button 
                           onClick={() => setCandidateToDelete(candidate.id)}
@@ -313,6 +422,15 @@ export function AdminDashboard() {
               </div>
             ))}
           </div>
+          
+          {viewNotesCandidate?.photoUrl && (
+            <div className="mt-6 pt-4 border-t border-slate-200">
+              <p className="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-primary" /> Foto Dokumentasi Wawancara
+              </p>
+              <img src={viewNotesCandidate.photoUrl} alt="Dokumentasi Wawancara" className="max-w-md w-full max-h-80 object-contain rounded-lg border border-slate-200 bg-white shadow-sm" />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -344,6 +462,69 @@ export function AdminDashboard() {
               {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {isDeleting ? 'Menghapus...' : 'Ya, Hapus Data'}
             </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Photo Dialog */}
+      <Dialog open={!!uploadCandidateId} onOpenChange={(open) => !open && !isUploadingPhoto && setUploadCandidateId(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-slate-800">
+              <ImageIcon className="w-5 h-5 text-primary" /> Upload Foto Wawancara
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Kandidat: <strong>{uploadCandidateName}</strong><br/>
+              *Foto ini berlaku sebagai dokumentasi untuk 2 interviewer sekaligus.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            <input 
+              type="file" 
+              accept="image/png, image/jpeg, image/webp" 
+              onChange={handleFileChange}
+              className="block w-full text-sm text-slate-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-md file:border-0
+                file:text-sm file:font-semibold
+                file:bg-primary/10 file:text-primary
+                hover:file:bg-primary/20
+                cursor-pointer"
+            />
+            {photoPreview && (
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-slate-500 mb-2">Preview (Otomatis Dikompres):</p>
+                <img src={photoPreview} alt="Preview" className="w-full rounded-md border border-slate-200 shadow-sm max-h-60 object-contain bg-slate-50" />
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <button 
+              onClick={() => setUploadCandidateId(null)}
+              disabled={isUploadingPhoto}
+              className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              Batal
+            </button>
+            <button 
+              onClick={handleUploadPhoto}
+              disabled={!photoPreview || isUploadingPhoto}
+              className="px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primary/90 rounded-lg shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isUploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {isUploadingPhoto ? 'Mengupload...' : 'Simpan Foto'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Full Photo Preview Dialog */}
+      <Dialog open={!!fullPhotoPreview} onOpenChange={(open) => !open && setFullPhotoPreview(null)}>
+        <DialogContent className="max-w-[90vw] md:max-w-4xl p-1 bg-transparent border-none shadow-none">
+          <div className="relative flex items-center justify-center">
+            {fullPhotoPreview && (
+              <img src={fullPhotoPreview} alt="Preview Wawancara" className="max-w-full max-h-[85vh] object-contain rounded-md" />
+            )}
           </div>
         </DialogContent>
       </Dialog>

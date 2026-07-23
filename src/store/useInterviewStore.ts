@@ -8,6 +8,7 @@ export interface CandidateData {
   posisiLamaran: string
   wilayahPendaftaran: string
   kampus: string
+  prodi: string
   ipk: string
   lamaStudi: string
   tautanBerkas: string

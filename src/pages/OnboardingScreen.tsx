@@ -22,6 +22,7 @@ const formSchema = z.object({
   posisiLamaran: z.string(),
   wilayahPendaftaran: z.string(),
   kampus: z.string(),
+  prodi: z.string(),
   ipk: z.string(),
   lamaStudi: z.string(),
   tautanBerkas: z.string()
@@ -83,6 +84,7 @@ export function OnboardingScreen() {
       posisiLamaran: "",
       wilayahPendaftaran: "",
       kampus: "",
+      prodi: "",
       ipk: "",
       lamaStudi: "",
       tautanBerkas: ""
@@ -107,6 +109,7 @@ export function OnboardingScreen() {
         form.setValue("posisiLamaran", found["Posisi Lamaran"] || "");
         form.setValue("wilayahPendaftaran", found["Wilayah Pendaftaran"] || "");
         form.setValue("kampus", found["Kampus"] || "");
+        form.setValue("prodi", found["Prodi"] || "");
         form.setValue("ipk", found["IPK"] || "");
         form.setValue("lamaStudi", found["Lama Studi"] || "");
         form.setValue("tautanBerkas", found["Tautan Berkas GDrive"] || "");
@@ -242,6 +245,10 @@ export function OnboardingScreen() {
                     <div>
                       <p className="text-[10px] uppercase text-slate-500 font-semibold mb-1">Kampus</p>
                       <p className="text-sm text-slate-800 font-medium">{form.watch("kampus") || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase text-slate-500 font-semibold mb-1">Prodi</p>
+                      <p className="text-sm text-slate-800 font-medium">{form.watch("prodi") || "-"}</p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase text-slate-500 font-semibold mb-1">IPK</p>
